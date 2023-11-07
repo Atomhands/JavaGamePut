@@ -24,6 +24,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
     Texture rainImg;
     Texture bucketImg;
     Texture back;
+    Texture fireImg;
     private int score;
     private BitmapFont font;
     // 相机和 SpriteBatch
@@ -32,9 +33,10 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
     //图形
     private Rectangle bucket;
     private Array<Rectangle> rain;
+    private Array<Rectangle> fire;
     private long lastDropRainTime;
+    private long lastFireTime;
     private boolean isStart;
-    private ApplicationAdapter adapter;
 
     @Override
     public void create() {
@@ -44,24 +46,26 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         rainImg = new Texture("photo/Rain.png");
         bucketImg = new Texture("photo/bucket.jpg");
         back = new Texture("photo/back.png");
+        fireImg = new Texture("photo/fire.jpg");
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 1200, 960);
         score = 0;
+        //bucket
         bucket = new Rectangle();
-        bucket.x = 1200 / 2 - 64 / 2;
+        bucket.x = 600;
         bucket.y = 20;
         bucket.width = 64;
         bucket.height = 64;
 
         isStart = false;
-        adapter = new MyGdxGame();
-
         font = new BitmapFont();
         font.setColor(0.25f, 0.8f, 0.16f, 0.9f);
         font.getData().setScale(3);
 
         rain = new Array<>();
+        fire = new Array<>();
         rainDrop();
+        fireShot();
     }
 
     @Override
@@ -79,12 +83,17 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
             batch.draw(back, 0, 0, 1200, 960);
             batch.draw(bucketImg, bucket.x, bucket.y);
+
             for (Rectangle rainD :
                     rain) {
                 batch.draw(rainImg, rainD.x, rainD.y);
             }
-
+            for (Rectangle fireS :
+                    fire) {
+                batch.draw(rainImg, fireS.x, fireS.y);
+            }
             //雨滴下落
+            //发射fire
             if (TimeUtils.nanoTime() - lastDropRainTime > 500000000) rainDrop();
             for (Iterator<Rectangle> iter = rain.iterator(); iter.hasNext(); ) {
                 Rectangle nextDrop = iter.next();
@@ -95,10 +104,26 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
                     score += 10;
                     iter.remove();
                 }
+
                 font.draw(batch, "SCORE: " + score, 160, 766);
             }
+            //碰撞
+            if(TimeUtils.nanoTime()-lastFireTime>500000000) fireShot();
+            for (Iterator<Rectangle> iterF = fire.iterator(); iterF.hasNext(); ) {
+                Rectangle nextShot = iterF.next();
+                nextShot.y += 500 * Gdx.graphics.getDeltaTime();
+                if (nextShot.y > 960) iterF.remove();
+                for (Rectangle rainDrop :
+                        rain) {
+                    if(rainDrop.overlaps(nextShot)){
+                        score += 30;
+                        iterF.remove();
+                        rain.removeValue(rainDrop,true);
+                    }
+                }
+            }
             batch.end();
-            //鼠标控制
+            //鼠标控制bucket
             if (Gdx.input.isTouched()) {
                 final Vector3 touch = new Vector3();
                 touch.set(Gdx.input.getX(), Gdx.input.getY(), 0);
@@ -111,6 +136,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
             //限制范围
             if (bucket.x < 0) bucket.x = 0;
             if (bucket.x > 1200) bucket.x = 1200 - 64 * 2;
+            //if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) fire.y += 500 * Gdx.graphics.getDeltaTime();
         }
     }
 
@@ -121,6 +147,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         bucketImg.dispose();
         rainImg.dispose();
         back.dispose();
+        fireImg.dispose();
     }
 
     private void rainDrop() {
@@ -133,9 +160,22 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         lastDropRainTime = TimeUtils.nanoTime();
     }
 
+    private void fireShot() {
+        Rectangle fireShot = new Rectangle();
+        fireShot.x = bucket.x+32;
+        fireShot.y = 20;
+        fireShot.width = 64;
+        fireShot.height = 64;
+        fire.add(fireShot);
+        lastFireTime = TimeUtils.nanoTime();
+    }
+    private void fireShotIterator(){
+
+    }
+
     @Override
     public boolean keyDown(int keycode) {
-        if(keycode == Input.Keys.SPACE){
+        if (keycode == Input.Keys.P) {
             isStart = !isStart;
         }
         return true;
