@@ -4,6 +4,8 @@ import com.badlogic.gdx.ApplicationAdapter;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
 import com.badlogic.gdx.InputProcessor;
+import com.badlogic.gdx.audio.Music;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.GL20;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
@@ -15,6 +17,9 @@ import com.badlogic.gdx.math.Rectangle;
 import com.badlogic.gdx.utils.Array;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.utils.TimeUtils;
+import com.mygdx.music.StartMusic;
+import com.mygdx.music.StartMusicSafe;
+import javafx.scene.media.VideoTrack;
 
 import java.awt.*;
 import java.util.Iterator;
@@ -37,7 +42,6 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
     private long lastDropRainTime;
     private long lastFireTime;
     private boolean isStart;
-
     @Override
     public void create() {
         Gdx.input.setInputProcessor(this);
@@ -45,7 +49,7 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
         img = new Texture("badlogic.jpg");
         rainImg = new Texture("photo/Rain.png");
         bucketImg = new Texture("photo/bucket.jpg");
-        back = new Texture("photo/back.png");
+        back = new Texture("photo/starBack.png");
         fireImg = new Texture("photo/fire.jpg");
         camera = new OrthographicCamera();
         camera.setToOrtho(false, 1200, 960);
@@ -93,7 +97,6 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
                 batch.draw(rainImg, fireS.x, fireS.y);
             }
             //雨滴下落
-            //发射fire
             if (TimeUtils.nanoTime() - lastDropRainTime > 500000000) rainDrop();
             for (Iterator<Rectangle> iter = rain.iterator(); iter.hasNext(); ) {
                 Rectangle nextDrop = iter.next();
@@ -104,23 +107,30 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
                     score += 10;
                     iter.remove();
                 }
-
                 font.draw(batch, "SCORE: " + score, 160, 766);
             }
-            //碰撞
-            if(TimeUtils.nanoTime()-lastFireTime>500000000) fireShot();
+            //发射fire
+            if (TimeUtils.nanoTime() - lastFireTime > 500000000) {
+                fireShot();
+                StartMusicSafe instance = StartMusicSafe.getInstance();
+                instance.runShotMusic();
+            }
             for (Iterator<Rectangle> iterF = fire.iterator(); iterF.hasNext(); ) {
                 Rectangle nextShot = iterF.next();
+
                 nextShot.y += 500 * Gdx.graphics.getDeltaTime();
+
                 if (nextShot.y > 960) iterF.remove();
                 for (Rectangle rainDrop :
                         rain) {
-                    if(rainDrop.overlaps(nextShot)){
+                    if (rainDrop.overlaps(nextShot)) {
                         score += 30;
                         iterF.remove();
-                        rain.removeValue(rainDrop,true);
+                        StartMusicSafe.getInstance().runBoomMusic();
+                        rain.removeValue(rainDrop, true);
                     }
                 }
+
             }
             batch.end();
             //鼠标控制bucket
@@ -136,7 +146,6 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
             //限制范围
             if (bucket.x < 0) bucket.x = 0;
             if (bucket.x > 1200) bucket.x = 1200 - 64 * 2;
-            //if(Gdx.input.isKeyPressed(Input.Keys.SPACE)) fire.y += 500 * Gdx.graphics.getDeltaTime();
         }
     }
 
@@ -162,15 +171,12 @@ public class MyGdxGame extends ApplicationAdapter implements InputProcessor {
 
     private void fireShot() {
         Rectangle fireShot = new Rectangle();
-        fireShot.x = bucket.x+32;
+        fireShot.x = bucket.x + 32;
         fireShot.y = 20;
         fireShot.width = 64;
         fireShot.height = 64;
         fire.add(fireShot);
         lastFireTime = TimeUtils.nanoTime();
-    }
-    private void fireShotIterator(){
-
     }
 
     @Override
